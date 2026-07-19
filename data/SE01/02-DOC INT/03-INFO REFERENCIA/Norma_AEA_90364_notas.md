@@ -1,0 +1,1 @@
+# Notas de referencia AEA 90364 aplicadas al diseño de SE01 (resumen interno, no oficial).
