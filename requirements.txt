@@ -1,0 +1,14 @@
+streamlit
+langchain-core
+langchain-community
+langchain-groq
+langgraph
+pydantic
+groq
+sqlalchemy
+pymysql
+sentence-transformers
+faiss-cpu
+python-docx
+openpyxl
+numpy
