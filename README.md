@@ -9,6 +9,8 @@ sin necesidad de abrir manualmente ningún documento, planilla o base de datos.
 
 **🔗 App en producción:** https://sei-agente.streamlit.app/
 
+![Sistema Multi-Agente SEI funcionando en Streamlit Community Cloud](docs/captura_app_streamlit.png)
+
 ---
 
 ## 📋 Descripción general
