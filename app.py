@@ -197,7 +197,12 @@ class Chunk:
     texto: str
     metadata: dict
 
-def dividir_en_chunks(texto: str, tam: int = 700, solape: int = 180) -> List[str]:
+PATRON_SECCION = re.compile(r"\n(?=\d{1,3}\.\s+[A-ZÁÉÍÓÚÑ])")
+
+def _dividir_por_caracteres(texto: str, tam: int, solape: int) -> List[str]:
+    """Corte ciego cada `tam` caracteres con solapamiento. Se usa solo como
+    fallback: para documentos sin estructura numerada, o para sub-dividir
+    una sección individual que resultó excepcionalmente larga."""
     texto = texto.strip()
     if len(texto) <= tam:
         return [texto] if texto else []
@@ -206,6 +211,40 @@ def dividir_en_chunks(texto: str, tam: int = 700, solape: int = 180) -> List[str
         fin = min(inicio + tam, len(texto))
         chunks.append(texto[inicio:fin])
         inicio += tam - solape
+    return chunks
+
+def dividir_en_chunks(texto: str, tam: int = 1400, solape: int = 250) -> List[str]:
+    """Chunking ESTRUCTURADO: prioriza cortar por secciones numeradas
+    ("1. INTRODUCCIÓN", "2. PROYECTO SE01"...) en vez de por cantidad fija
+    de caracteres. Así, un documento maestro con decenas de entradas (ej. un
+    listado histórico de 60 proyectos) genera un fragmento por entrada, sin
+    mezclar ni cortar proyectos distintos en el mismo chunk — escala a
+    documentos largos igual que a documentos cortos. Si una sección
+    individual es muy larga, se sub-divide con el método de solapamiento
+    como fallback. Si el documento no tiene secciones numeradas detectables,
+    cae directo al corte por caracteres (comportamiento anterior).
+    """
+    texto = texto.strip()
+    if not texto:
+        return []
+
+    secciones = PATRON_SECCION.split(texto)
+    # Si no se detectó estructura numerada (0 o 1 "sección" = todo el texto
+    # junto), no hay nada que aproveche este método — usar el fallback.
+    if len(secciones) <= 1:
+        return _dividir_por_caracteres(texto, tam, solape)
+
+    chunks = []
+    for seccion in secciones:
+        seccion = seccion.strip()
+        if not seccion:
+            continue
+        if len(seccion) <= tam:
+            chunks.append(seccion)
+        else:
+            # Sección individual demasiado larga: sub-dividir solo esa,
+            # sin afectar al resto de las secciones (que quedan intactas).
+            chunks.extend(_dividir_por_caracteres(seccion, tam, solape))
     return chunks
 
 def construir_corpus(rutas_proyectos: dict, filtro_fn) -> List[Chunk]:
