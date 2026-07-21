@@ -17,6 +17,8 @@ import faiss
 from sentence_transformers import SentenceTransformer
 from docx import Document as DocxDocument
 import openpyxl
+from pypdf import PdfReader
+from pptx import Presentation
 
 from sqlalchemy import create_engine, text
 from langchain_community.utilities import SQLDatabase
@@ -80,6 +82,29 @@ def leer_xlsx(path: str) -> str:
                 partes.append(" | ".join(valores))
     return "\n".join(partes)
 
+def leer_pdf(path: str) -> str:
+    reader = PdfReader(path)
+    partes = []
+    for pagina in reader.pages:
+        texto = pagina.extract_text()
+        if texto:
+            partes.append(texto)
+    return "\n".join(partes)
+
+def leer_pptx(path: str) -> str:
+    prs = Presentation(path)
+    partes = []
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if shape.has_text_frame and shape.text_frame.text.strip():
+                partes.append(shape.text_frame.text)
+            if shape.has_table:
+                for fila in shape.table.rows:
+                    celdas = [c.text.strip() for c in fila.cells if c.text.strip()]
+                    if celdas:
+                        partes.append(" | ".join(celdas))
+    return "\n".join(partes)
+
 def extraer_texto(path: str) -> str:
     ext = path.lower().rsplit(".", 1)[-1]
     try:
@@ -89,11 +114,15 @@ def extraer_texto(path: str) -> str:
             return leer_docx(path)
         if ext == "xlsx":
             return leer_xlsx(path)
+        if ext == "pdf":
+            return leer_pdf(path)
+        if ext == "pptx":
+            return leer_pptx(path)
     except Exception:
         pass
     return ""
 
-PATRON_CODIGO = re.compile(r"(SE0[12]-[\w]+-[A-Z]-[A-Z]+-\d+)_([A-Z0-9]+)")
+PATRON_CODIGO = re.compile(r"((?:SE0[12]|SEI)-[\w]+-[A-Z]-[A-Z]+-\d+)_([A-Z0-9]+)")
 
 def parsear_metadata(path: str, proyecto: str) -> dict:
     nombre = os.path.basename(path)
@@ -103,7 +132,9 @@ def parsear_metadata(path: str, proyecto: str) -> dict:
     vigente = "/SUP/" not in path.replace("\\", "/")
 
     ruta_norm = path.replace("\\", "/")
-    if "MINUTAS REUNION" in ruta_norm:
+    if proyecto == "GENERAL":
+        tipo_documento = "INSTITUCIONAL"
+    elif "MINUTAS REUNION" in ruta_norm:
         tipo_documento = "MINUTA"
     elif "00-RFI" in ruta_norm and "SDI" in nombre.upper():
         tipo_documento = "SDI"
@@ -129,23 +160,35 @@ def parsear_metadata(path: str, proyecto: str) -> dict:
     return {"proyecto": proyecto, "ruta": path, "documento": codigo, "revision": revision,
             "vigente": vigente, "tipo_documento": tipo_documento, "disciplina": disciplina}
 
+EXTENSIONES_SOPORTADAS = (".pdf", ".docx", ".xlsx", ".md", ".txt", ".pptx")
+
 def es_conocimiento(path: str) -> bool:
+    """Clasifica por CARPETA únicamente. La extensión se valida acá solo
+    para descartar formatos no soportados (imágenes sueltas, etc.) — un PDF,
+    un Word, un Excel o un PPT en la misma carpeta se tratan exactamente igual."""
     p = path.replace("\\", "/")
+    if not p.lower().endswith(EXTENSIONES_SOPORTADAS):
+        return False
+    if "/GENERAL/" in p:
+        return True
     if "03-INFO REFERENCIA" in p:
         return True
     if "02-ELABORADOS" in p and "00-MINUTAS REUNION" not in p and "00-RFI" not in p:
-        return path.lower().endswith(".md")
+        return True
     return False
 
 def es_comunicaciones(path: str) -> bool:
+    """Idem es_conocimiento: clasifica por carpeta, no por extensión."""
     p = path.replace("\\", "/")
-    if "00-MINUTAS REUNION" in p and path.lower().endswith(".docx"):
+    if not p.lower().endswith(EXTENSIONES_SOPORTADAS):
+        return False
+    if "00-MINUTAS REUNION" in p:
         return True
-    if "00-RFI" in p and path.lower().endswith((".docx", ".xlsx")):
+    if "00-RFI" in p:
         return True
-    if "00-DOC REC" in p and path.lower().endswith(".txt"):
+    if "00-DOC REC" in p:
         return True
-    if "00-TTR" in p and path.lower().endswith(".xlsx"):
+    if "00-TTR" in p:
         return True
     return False
 
@@ -242,7 +285,8 @@ RESPUESTA:"""
 @st.cache_resource(show_spinner="Indexando base de conocimiento (RAG)... puede tardar 1-2 min la primera vez")
 def build_rag():
     embedder = SentenceTransformer("intfloat/multilingual-e5-small")
-    rutas = {"SE01": os.path.join(DATA_DIR, "SE01"), "SE02": os.path.join(DATA_DIR, "SE02")}
+    rutas = {"SE01": os.path.join(DATA_DIR, "SE01"), "SE02": os.path.join(DATA_DIR, "SE02"),
+             "GENERAL": os.path.join(DATA_DIR, "GENERAL")}
     corpus_conocimiento = construir_corpus(rutas, es_conocimiento)
     corpus_comunicaciones = construir_corpus(rutas, es_comunicaciones)
     idx_conocimiento = IndiceFAISS(corpus_conocimiento, embedder)

@@ -11,4 +11,6 @@ sentence-transformers
 faiss-cpu
 python-docx
 openpyxl
+pypdf
+python-pptx
 numpy
