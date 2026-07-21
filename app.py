@@ -372,6 +372,10 @@ Contexto importante:
   Si la pregunta menciona 'SE01' o 'SE02', hacé JOIN con `proyectos` usando
   `codigo_proyecto` para resolver el `id_proyecto`.
 - Solo hay 2 proyectos cargados: SE01 (id_proyecto=9) y SE02 (id_proyecto=10).
+- Si la pregunta pide el nombre/razón social del cliente de un proyecto, unir
+  `proyectos.id_cliente` con `clientes.id_cliente`. El nombre del cliente está
+  en la columna `clientes.razon_social` (NO existe una columna `nombre` en
+  `clientes`).
 - Para cualquier expresión de tiempo relativo ("la semana pasada", "este mes",
   "hoy", "últimos N días"), NO uses CURDATE() ni NOW(). Usá como fecha de
   referencia fija el literal '{fecha_referencia}'.
@@ -439,7 +443,8 @@ Respuesta:
 def sql_avance(pregunta: str) -> dict:
     engine, llm = get_engine(), get_llm()
     db = SQLDatabase(engine, include_tables=["gestion_proyectos", "riesgos_proyecto",
-                                              "hitos_proyecto", "cambios_alcance", "proyectos"])
+                                              "hitos_proyecto", "cambios_alcance", "proyectos",
+                                              "clientes"])
     chain = _PROMPT_SQL_AVANCE | llm | StrOutputParser()
     resp_chain = _PROMPT_RESPUESTA_AVANCE | llm | StrOutputParser()
     sql_query = ""
