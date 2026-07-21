@@ -508,7 +508,11 @@ deben responderla. Reglas de asignación:
   totales de horas por categoría o persona.
 - RAG_CONOCIMIENTO: preguntas sobre contenido técnico de documentos de ingeniería
   vigentes (memorias de cálculo, listados de cargas, planos, normas aplicadas,
-  lecciones aprendidas de diseño).
+  lecciones aprendidas de diseño), Y TAMBIÉN preguntas institucionales o generales
+  sobre la empresa SEI Ingeniería S.R.L. en sí misma (quiénes son, qué servicios
+  ofrecen, misión, visión, valores, síntesis o resumen de los proyectos activos que
+  tiene la empresa) — estas últimas se responden con los documentos institucionales
+  generales de la carpeta GENERAL, no con documentos de un proyecto específico.
 - RAG_COMUNICACIONES: preguntas sobre qué se acordó, consultó o respondió en
   minutas de reunión, SDI/RFI, o transmittals con el cliente.
 
@@ -516,9 +520,16 @@ Si la pregunta necesita combinar datos de gestión/lecciones aprendidas (BD) CON
 el contenido de un documento técnico, incluí SQL_AVANCE (o TIMESHEET) Y
 RAG_CONOCIMIENTO juntos en la lista — no elijas solo uno si la pregunta pide ambos.
 
+Nunca dejes la lista de agentes vacía. Si la pregunta no encaja claramente en
+ninguna categoría de gestión (SQL_AVANCE/TIMESHEET) ni de comunicaciones con
+cliente (RAG_COMUNICACIONES), usá RAG_CONOCIMIENTO por defecto — es la categoría
+más amplia y cubre tanto documentos técnicos como institucionales generales.
+
 Si la pregunta menciona explícitamente "SE01" o "SE02", o un cliente
 (Minera NOA Litio SA = SE01, Litio Andino SA = SE02), completá el campo proyecto.
-Si no se menciona ningún proyecto, dejalo en null (no asumas)."""
+Si no se menciona ningún proyecto, o la pregunta es institucional/general sobre
+la empresa, dejalo en null (no asumas) — así la búsqueda no se restringe a un
+solo proyecto y puede encontrar los documentos generales de la empresa."""
 
 class AgentState(TypedDict):
     pregunta: str
