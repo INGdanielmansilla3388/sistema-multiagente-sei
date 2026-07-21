@@ -197,7 +197,7 @@ class Chunk:
     texto: str
     metadata: dict
 
-def dividir_en_chunks(texto: str, tam: int = 700, solape: int = 100) -> List[str]:
+def dividir_en_chunks(texto: str, tam: int = 700, solape: int = 180) -> List[str]:
     texto = texto.strip()
     if len(texto) <= tam:
         return [texto] if texto else []
@@ -448,7 +448,7 @@ def timesheet(pregunta: str) -> dict:
                 "sql_generado": sql_query, "resultado_crudo": [], "sub_agente": "timesheet", "error": str(e)}
 
 def rag_conocimiento(pregunta: str, proyecto: Optional[str] = None,
-                      solo_vigentes: bool = True, k: int = 4) -> dict:
+                      solo_vigentes: bool = True, k: int = 6) -> dict:
     idx_conocimiento, _ = build_rag()
     llm = get_llm()
     filtro = {}
@@ -466,7 +466,7 @@ def rag_conocimiento(pregunta: str, proyecto: Optional[str] = None,
     return {"respuesta": respuesta, "citaciones": chunks, "documentos_encontrados": True}
 
 def rag_comunicaciones(pregunta: str, proyecto: Optional[str] = None,
-                        solo_vigentes: bool = True, k: int = 4) -> dict:
+                        solo_vigentes: bool = True, k: int = 6) -> dict:
     _, idx_comunicaciones = build_rag()
     llm = get_llm()
     filtro = {}
